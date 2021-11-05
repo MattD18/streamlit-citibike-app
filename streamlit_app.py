@@ -144,8 +144,6 @@ station = st.selectbox(
     options=station_list_df['start_station_name'].unique()
 )
 
-station_df = df.loc[df['start_station_name'] == station]
-
 col1, col2 = st.columns(2)
 
 with col1:
