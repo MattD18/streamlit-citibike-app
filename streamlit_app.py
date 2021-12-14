@@ -17,17 +17,10 @@ client = bigquery.Client(credentials=credentials)
 
 
 ### DEFINE QUERIES ###
-station_list_query = """
-    SELECT start_station_name
-    FROM (
-        SELECT  
-            start_station_name,
-            count(ride_id)
-        FROM `streamlit-citibike-app.citibike_data.rides` 
-        group by 1
-        order by 2 desc
-        LIMIT 20
-    )
+station_info_query = """
+    SELECT 
+        *
+    FROM  `streamlit-citibike-app.citibike_data.stations`
 """
 
 timeperiod_query = """
@@ -128,7 +121,7 @@ def run_query(query):
 
 ## INITIAL DATA LOAD ##
 
-station_list_df = run_query(station_list_query)
+station_info_df = run_query(station_info_query)
 timeperiod_df = run_query(timeperiod_query)
 
 ### UI CODE ###
@@ -139,14 +132,40 @@ timeperiod_end = timeperiod_df.iloc[0][1]
 timeperiod_num_days= (timeperiod_end.date() - timeperiod_start.date()).days
 st.write(f'Data for {timeperiod_start.date()} through {timeperiod_end.date()}')
 # specify station
-station = st.selectbox(
-    label='Select Station',
-    options=station_list_df['start_station_name'].unique()
-)
+station_col1, station_col2, station_col3 = st.columns(3)
 
-col1, col2 = st.columns(2)
+with station_col1:
+    borough_list = np.sort(station_info_df['borough'].unique())
+    borough = st.selectbox(
+        label='Select Borough',
+        options=borough_list
+    )      
+with station_col2:
+    neighborhood_list = np.sort(
+        station_info_df \
+            .loc[station_info_df['borough']==borough]['neighborhood'].unique()
+    )
+    neighborhood = st.selectbox(
+        label='Select Neighborhood',
+        options=neighborhood_list
+    )      
+with station_col3:
+    station_list = np.sort(
+        station_info_df \
+            .loc[(station_info_df['borough']==borough) \
+                & (station_info_df['neighborhood']==neighborhood)] \
+            ['station_name'].unique()
+    )
+    station = st.selectbox(
+        label='Select Station',
+        options=station_list
+    )      
 
-with col1:
+
+
+main_col1, main_col2 = st.columns(2)
+
+with main_col1:
 
     # collect display stats
     avg_trips_per_day_query = generate_avg_trips_query(station)
@@ -177,7 +196,7 @@ with col1:
             })
     )
 
-with col2:
+with main_col2:
     
     num_rides_by_hour_query = generate_num_rides_by_hour_query(station)
     num_rides_by_hour_df = run_query(num_rides_by_hour_query)
@@ -199,4 +218,4 @@ with col2:
 
     st.plotly_chart(num_rides_by_hour_hist)
 
-
+# To Do organize queries, add better search to the station finder
